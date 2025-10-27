@@ -1,0 +1,20 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "test",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anphuc0311/GPS.git"
+  },
+  "author": "anphuc",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/anphuc0311/GPS/issues"
+  },
+  "homepage": "https://github.com/anphuc0311/GPS#readme"
+}
