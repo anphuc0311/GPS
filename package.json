@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/anphuc0311/GPS#readme",
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "ejs": "^3.1.10"
   },
