@@ -1,83 +1,101 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>  //thao tac voi file
-#include <termios.h> // config uart
-#include <unistd.h> //thao tac voi cong serial
 #include <string.h>
-#include <sys/types.h>
-#include "../lib/gps.h"
+#include <time.h>
+#include <curl/curl.h> // Thư viện để thực hiện HTTP request
 
+#define MAX_DATA_SIZE 128
+#define SERVER_URL "http://localhost:3000/api/update-location"
 
-int main() {
-    int fd; //= serial_port
-    struct termios tty;
-    char buf[256];
-    ssize_t n;
-    initStations();
+/**
+ * @brief Hàm mô phỏng việc đọc dữ liệu GPS và tạo chuỗi POST.
+ * @param buffer Buffer để lưu trữ chuỗi dữ liệu GPS (dạng: lat=X.XXXX&lon=Y.YYYY&userId=Z)
+ * @return void 
+ */
+void generate_gps_data(char *buffer) {
+    // Giá trị cơ sở gần POI D3 Bách Khoa
+    double base_lat = 21.0069;
+    double base_lon = 105.8437;
 
-    fd = open("/dev/ttyACM0", O_RDONLY | O_NOCTTY);
-    if (fd < 0) {
-        perror("not open /dev/ttyACM0");
-        return 1;
-    }
+    // Tạo giá trị ngẫu nhiên nhỏ để mô phỏng di chuyển (trong vòng 100 mét)
+    srand(time(NULL));
+    // Tạo offset ngẫu nhiên
+    double random_offset_lat = ((double)rand() / RAND_MAX * 0.0005) - 0.00025; 
+    double random_offset_lon = ((double)rand() / RAND_MAX * 0.0005) - 0.00025;
 
-    memset(&tty, 0, sizeof(tty));
-    if (tcgetattr(fd, &tty) != 0) { //lay cau hinh hien tai cua cong serial
-        perror("tcgetattr");
-        close(fd);
-        return 1;
-    }
+    double current_lat = base_lat + random_offset_lat;
+    double current_lon = base_lon + random_offset_lon;
+    
+    // Giả lập ID thiết bị 
+    const char *device_id = "Device_LIB_C_001";
 
-    cfsetispeed(&tty, B9600);
-    cfsetospeed(&tty, B9600);
-    tty.c_iflag = 0;
-    tty.c_oflag = 0;
-    tty.c_lflag = 0;
-    tty.c_cflag |= (CLOCAL | CREAD);
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;
-    tty.c_cflag &= ~(PARENB | CSTOPB | CRTSCTS);
+    // =================================================================
+    // PHẦN TẠO CHUỖI DỮ LIỆU ĐÚNG DẠNG URL-ENCODED CHO SERVER NODE.JS
+    // Server mong đợi: lat, lon, userId
+    // =================================================================
+    snprintf(buffer, MAX_DATA_SIZE, 
+             "lat=%.6f&lon=%.6f&userId=%s", 
+             current_lat, current_lon, device_id);
+}
 
-    tcflush(fd, TCIFLUSH);
-    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        perror("tcsetattr");
-        close(fd);
-        return 1;
-    }
+/**
+ * @brief Hàm chính để gửi dữ liệu lên server bằng libcurl.
+ * @param post_data Chuỗi dữ liệu POST đã được format (e.g., "lat=...&lon=...")
+ * @return int 0 nếu thành công, khác 0 nếu lỗi.
+ */
+int send_data_to_server(const char *post_data) {
+    CURL *curl;
+    CURLcode res;
 
-    printf("=== Đang đọc dữ liệu NMEA từ VK-162 ===\n");
-    printf("Nhấn Ctrl+C để dừng.\n\n");
+    curl = curl_easy_init();
+    if (curl) {
+        // Thiết lập URL đích
+        curl_easy_setopt(curl, CURLOPT_URL, SERVER_URL);
+        
+        // Thiết lập phương thức POST
+        curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        
+        // Thiết lập dữ liệu POST
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
+        
+        // Thiết lập header: Báo cho server đây là dạng URL-encoded
+        struct curl_slist *headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/x-www-form-urlencoded");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-    while (1) {
-        n = read(fd, buf, sizeof(buf) - 1);
-        if (n > 0) {
-            buf[n] = '\0';
-            printf("%s", buf);
-            tachGPGLL(buf); 
-            fflush(stdout);
-            for (int i = 0; i < station_count; i++) {
-              if (checkStation(&curr, &stations[i]) == 1) {
-                printf("\n %s", stations[i].name);
-                //process_gps();
-              }
-            }
-        } else {
-            usleep(100000); 
+        printf("-> Đang gửi dữ liệu: %s\n", post_data);
+        
+        res = curl_easy_perform(curl);
+        
+        if (res != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() thất bại: %s\n", curl_easy_strerror(res));
+            curl_slist_free_all(headers);
+            curl_easy_cleanup(curl);
+            return 1;
         }
-    }
 
-    close(fd);
+        long http_code = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+        printf("<- Phản hồi HTTP Code: %ld\n", http_code);
+
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+    }
     return 0;
 }
 
-//-----------------------------------baby function------------------------------
+int main() {
+    char gps_data_buffer[MAX_DATA_SIZE];
+    
+    // 1. Khởi tạo dữ liệu GPS
+    generate_gps_data(gps_data_buffer);
 
+    // 2. Gửi dữ liệu trực tiếp lên server
+    if (send_data_to_server(gps_data_buffer) == 0) {
+        printf("Gửi dữ liệu GPS hoàn tất.\n");
+    } else {
+        printf("Gửi dữ liệu GPS thất bại! (Kiểm tra Server Node.js)\n");
+    }
 
-
-
-
-
-
-
-//void process_gps() {
-//}
+    return 0;
+}
