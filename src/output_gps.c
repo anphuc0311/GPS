@@ -1,16 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <time.h>
-#include <curl/curl.h> // Thư viện để thực hiện HTTP request
+#include <unistd.h> // [MỚI] Dùng cho hàm sleep() để tạo độ trễ
+#include <curl/curl.h> 
 
 #define MAX_DATA_SIZE 128
 #define SERVER_URL "http://localhost:3000/api/update-location"
+#define SEND_INTERVAL_SEC 5 // Gửi dữ liệu mỗi 5 giây
 
 /**
  * @brief Hàm mô phỏng việc đọc dữ liệu GPS và tạo chuỗi POST.
- * @param buffer Buffer để lưu trữ chuỗi dữ liệu GPS (dạng: lat=X.XXXX&lon=Y.YYYY&userId=Z)
- * @return void 
+ * * Sử dụng time(NULL) làm seed cho rand()
  */
 void generate_gps_data(char *buffer) {
     // Giá trị cơ sở gần POI D3 Bách Khoa
@@ -19,20 +21,15 @@ void generate_gps_data(char *buffer) {
 
     // Tạo giá trị ngẫu nhiên nhỏ để mô phỏng di chuyển (trong vòng 100 mét)
     srand(time(NULL));
-    // Tạo offset ngẫu nhiên
     double random_offset_lat = ((double)rand() / RAND_MAX * 0.0005) - 0.00025; 
     double random_offset_lon = ((double)rand() / RAND_MAX * 0.0005) - 0.00025;
 
     double current_lat = base_lat + random_offset_lat;
     double current_lon = base_lon + random_offset_lon;
     
-    // Giả lập ID thiết bị 
     const char *device_id = "Device_LIB_C_001";
 
-    // =================================================================
-    // PHẦN TẠO CHUỖI DỮ LIỆU ĐÚNG DẠNG URL-ENCODED CHO SERVER NODE.JS
-    // Server mong đợi: lat, lon, userId
-    // =================================================================
+    // Tạo chuỗi dữ liệu URL-ENCODED
     snprintf(buffer, MAX_DATA_SIZE, 
              "lat=%.6f&lon=%.6f&userId=%s", 
              current_lat, current_lon, device_id);
@@ -40,8 +37,6 @@ void generate_gps_data(char *buffer) {
 
 /**
  * @brief Hàm chính để gửi dữ liệu lên server bằng libcurl.
- * @param post_data Chuỗi dữ liệu POST đã được format (e.g., "lat=...&lon=...")
- * @return int 0 nếu thành công, khác 0 nếu lỗi.
  */
 int send_data_to_server(const char *post_data) {
     CURL *curl;
@@ -49,21 +44,15 @@ int send_data_to_server(const char *post_data) {
 
     curl = curl_easy_init();
     if (curl) {
-        // Thiết lập URL đích
         curl_easy_setopt(curl, CURLOPT_URL, SERVER_URL);
-        
-        // Thiết lập phương thức POST
         curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        
-        // Thiết lập dữ liệu POST
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_data);
         
-        // Thiết lập header: Báo cho server đây là dạng URL-encoded
         struct curl_slist *headers = NULL;
         headers = curl_slist_append(headers, "Content-Type: application/x-www-form-urlencoded");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-        printf("-> Đang gửi dữ liệu: %s\n", post_data);
+        printf("-> [%ld] Đang gửi dữ liệu: %s\n", (long)time(NULL), post_data); 
         
         res = curl_easy_perform(curl);
         
@@ -87,14 +76,23 @@ int send_data_to_server(const char *post_data) {
 int main() {
     char gps_data_buffer[MAX_DATA_SIZE];
     
-    // 1. Khởi tạo dữ liệu GPS
-    generate_gps_data(gps_data_buffer);
+    printf("--- BẮT ĐẦU GỬI DỮ LIỆU GPS LIÊN TỤC (Mỗi %d giây) ---\n", SEND_INTERVAL_SEC);
 
-    // 2. Gửi dữ liệu trực tiếp lên server
-    if (send_data_to_server(gps_data_buffer) == 0) {
-        printf("Gửi dữ liệu GPS hoàn tất.\n");
-    } else {
-        printf("Gửi dữ liệu GPS thất bại! (Kiểm tra Server Node.js)\n");
+    // Vòng lặp vô hạn để mô phỏng truyền tải liên tục
+    while(1) {
+        // 1. Khởi tạo dữ liệu GPS (Lấy tọa độ mới)
+        generate_gps_data(gps_data_buffer);
+
+        // 2. Gửi dữ liệu trực tiếp lên server
+        if (send_data_to_server(gps_data_buffer) == 0) {
+            // Gửi thành công
+        } else {
+            // Gửi thất bại
+        }
+
+        // 3. Tạm dừng 5 giây trước khi gửi tiếp
+        printf("... Tạm dừng %d giây...\n", SEND_INTERVAL_SEC);
+        sleep(SEND_INTERVAL_SEC);
     }
 
     return 0;

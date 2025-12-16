@@ -30,17 +30,17 @@ $(TARGET): $(SRC)
 	@echo "🔥 Bắt đầu biên dịch ứng dụng GPS Sender..."
 	# Lệnh biên dịch: gcc [Cờ biên dịch] [File nguồn] [Cờ libcurl] [Cờ thư viện toán học] -o [Tên file thực thi]
 	gcc $(CFLAGS) $(SRC) $(CURL_LIBS) $(MATH_LIB) -o $(TARGET)
-	@echo "✅ Biên dịch thành công. File thực thi: ./"$(TARGET)
+	@echo "Biên dịch thành công. File thực thi: ./"$(TARGET)
 
 # Quy tắc dọn dẹp (Xóa file thực thi và object files nếu có)
 clean:
 	@echo "🗑️ Dọn dẹp các file đã biên dịch..."
 	rm -f $(TARGET) *.o
-	@echo "✅ Hoàn tất dọn dẹp."
+	@echo "Hoàn tất dọn dẹp."
 
 # Quy tắc chạy chương trình
 run: $(TARGET)
-	@echo "🚀 Chạy chương trình..."
+	@echo "Chạy chương trình..."
 	./$(TARGET)
 
 .PHONY: all clean run
