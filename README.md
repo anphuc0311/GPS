@@ -1,72 +1,54 @@
-# Tên Dự Án Của Bạn
+# HỆ THỐNG THUYẾT MINH ĐỊA ĐIỂM DU LỊCH TỰ ĐỘNG
 
-Mô tả ngắn gọn về dự án (ví dụ: Đây là một ứng dụng quản lý công việc được xây dựng bằng React và Node.js nhằm giúp người dùng tối ưu hóa hiệu suất làm việc hàng ngày).
+## 1. Giới thiệu dự án
+Dự án này xây dựng một hệ thống thuyết minh du lịch thông minh, tự động nhận diện vị trí của người dùng thông qua tín hiệu GPS để phát âm thanh thuyết minh tương ứng. Hệ thống được thử nghiệm thực tế tại khuôn viên Đại học Bách Khoa Hà Nội với các địa điểm như Tòa nhà D3, Thư viện Tạ Quang Bửu, Cổng Parabol...
 
-## Mục lục
-1. Tính năng chính
-2. Công nghệ sử dụng
-3. Hướng dẫn cài đặt
-4. Cách sử dụng
-5. Cấu trúc thư mục
-6. Đóng góp
-7. Giấy phép
+## 2. Thành phần hệ thống
+Hệ thống là sự kết hợp giữa phần cứng (Hardware), Máy chủ (Backend Server) và Ứng dụng di động (Mobile App):
 
-## Tính năng chính
-* Tính năng 1: Mô tả ngắn gọn về lợi ích.
-* Tính năng 2: Mô tả ngắn gọn về lợi ích.
-* Tính năng 3: Giao diện thân thiện, dễ sử dụng.
-* Tính năng 4: Tốc độ xử lý nhanh và bảo mật cao.
+* Thiết bị đầu cuối: Raspberry Pi 4B kết hợp với module GPS.
+* Backend Server: Node.js, Express Framework.
+* Cơ sở dữ liệu: MongoDB (lưu trữ tọa độ các điểm và thông tin thuyết minh).
+* Mobile App: React Native (nhận tín hiệu và phát âm thanh thuyết minh).
 
-## Công nghệ sử dụng
-* Ngôn ngữ lập trình: (Ví dụ: JavaScript, Python, Java)
-* Framework/Thư viện: (Ví dụ: React, Express, Django)
-* Cơ sở dữ liệu: (Ví dụ: MongoDB, PostgreSQL)
-* Công cụ khác: (Ví dụ: Docker, Git, Firebase)
+## 3. Luồng hoạt động của hệ thống
+1. Raspberry Pi 4B đọc dữ liệu tọa độ (Kinh độ, Vĩ độ) từ module GPS theo thời gian thực.
+2. Thiết bị xử lý logic so sánh tọa độ hiện tại với các vùng kích hoạt (Trigger zones) đã được thiết lập sẵn trong code C.
+3. Khi người dùng di chuyển vào vùng xác định (Ví dụ: khu vực tòa nhà D3), Raspberry Pi gửi một yêu cầu HTTP Request lên Server.
+4. Server nhận yêu cầu, truy vấn dữ liệu từ MongoDB và gửi tín hiệu kích hoạt đến ứng dụng di động.
+5. Ứng dụng React Native nhận được lệnh và tự động phát file âm thanh (Audio) thuyết minh về địa điểm đó.
 
-## Hướng dẫn cài đặt
+## 4. Công nghệ sử dụng
+* Ngôn ngữ lập trình: C (xử lý trên Raspberry Pi), JavaScript (Node.js, React Native).
+* Phần cứng: Raspberry Pi 4B, Module GPS (Neo-6M hoặc tương đương).
+* Framework: Express.js, React Native.
+* Cơ sở dữ liệu: MongoDB.
+* Giao thức: HTTP, RESTful API.
 
-Để chạy dự án này trên máy cục bộ, bạn thực hiện theo các bước sau:
+## 5. Cấu trúc thư mục
+* /hardware: Mã nguồn C đọc dữ liệu GPS và xử lý logic trigger trên Raspberry Pi.
+* /backend: Mã nguồn Node.js server, quản lý API và kết nối database.
+* /mobile-app: Mã nguồn ứng dụng React Native cho điện thoại.
+* /assets: Chứa các file âm thanh thuyết minh và hình ảnh minh họa địa điểm.
 
-1. Sao chép kho lưu trữ:
-   git clone https://github.com/ten-nguoi-dung/ten-du-an.git
+## 6. Hướng dẫn cài đặt
+### Đối với Backend:
+1. Di chuyển vào thư mục backend: cd backend
+2. Cài đặt thư viện: npm install
+3. Cấu hình chuỗi kết nối MongoDB trong file .env
+4. Khởi chạy server: npm start
 
-2. Di chuyển vào thư mục dự án:
-   cd ten-du-an
+### Đối với Mobile App:
+1. Di chuyển vào thư mục mobile-app: cd mobile-app
+2. Cài đặt thư viện: npm install
+3. Chạy ứng dụng: npx react-native run-android (hoặc run-ios)
 
-3. Cài đặt các thư viện liên quan:
-   npm install
-   # Hoặc nếu dùng Python: pip install -r requirements.txt
+### Đối với Raspberry Pi:
+1. Biên dịch mã nguồn C: gcc main.c -o tourguide -lm
+2. Kết nối module GPS vào cổng Serial.
+3. Chạy chương trình: ./tourguide
 
-4. Cấu hình biến môi trường:
-   Tạo file .env từ file .env.example và điền các thông tin cần thiết.
-
-5. Khởi chạy ứng dụng:
-   npm start
-
-## Cách sử dụng
-Mô tả cách người dùng tương tác với ứng dụng. Bạn có thể đính kèm ảnh chụp màn hình hoặc link demo tại đây để tăng tính thuyết phục.
-
-## Cấu trúc thư mục
-ten-du-an/
-├── src/                # Mã nguồn chính
-├── public/             # Tài liệu tĩnh
-├── tests/              # Các file kiểm thử
-├── .env.example        # File mẫu cấu hình môi trường
-├── README.md           # Tài liệu hướng dẫn này
-└── package.json        # Thông tin các thư viện đã cài đặt
-
-## Đóng góp
-Chúng tôi luôn hoan nghênh mọi sự đóng góp để dự án hoàn thiện hơn. 
-1. Fork dự án.
-2. Tạo nhánh tính năng mới (git checkout -b feature/tinh-nang-moi).
-3. Commit thay đổi (git commit -m 'Mô tả thay đổi').
-4. Push lên nhánh vừa tạo (git push origin feature/tinh-nang-moi).
-5. Mở một Pull Request.
-
-## Giấy phép
-Dự án này được cấp phép theo Giấy phép MIT - xem file LICENSE để biết thêm chi tiết.
-
-## Liên hệ
-* Tên của bạn: 
-* Email: (Ví dụ: email@example.com)
-* GitHub: (Ví dụ: github.com/ten-cua-ban)
+## 7. Các điểm demo tại Bách Khoa
+* Tòa nhà D3: Thuyết minh về lịch sử và các khoa đào tạo tại đây.
+* Thư viện Tạ Quang Bửu: Thuyết minh về quy mô, chức năng và các phòng đọc.
+* Cổng Parabol: Thuyết minh về ý nghĩa biểu tượng của trường Đại học Bách Khoa.
